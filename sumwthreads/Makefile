@@ -1,6 +1,7 @@
 CC = gcc
 
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -fopt-info-all
+OPTFLAGS = -O3 -march=native -mtune=native
 
 % : %.c
 	$(CC) $(CFLAGS) $< -o $@ $(LIBS)
