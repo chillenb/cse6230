@@ -109,6 +109,6 @@ float single_thread_sum(span<float> array) {
     for(float x : array) {
         sum += x;
     }
-    printf("%f\n", sum);
+    //printf("%f\n", sum);
     return sum;
 }
