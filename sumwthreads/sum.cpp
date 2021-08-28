@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <thread>
 #include <span>
 #include <random>
@@ -45,52 +44,47 @@ int main(int argc, char** argv) {
         usage();
     }
     
-    float* ptr;
-    ptr = (float*) malloc(n * sizeof(float));
-    if(ptr == NULL) {
+    /* Allocate memory for the array */
+    float* buf;
+    buf = (float*) malloc(n * sizeof(float));
+    if(buf == NULL) {
         fprintf(stderr, "memory allocation error\n");
         exit(EXIT_FAILURE);
     }
+    span<float> array(buf, n);
 
-    span<float> array(ptr, n);
-    time_t mt;
-
-    std::mt19937 gen;
-    gen.seed(0);
+    /* Fill the array with pseudorandom floats */
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(-20.0, 20.0);
-
-    for(float f : array) {
-        f = dist(gen);
+    for(auto it = array.begin(); it != array.end(); it++) {
+        *it = dist(gen);
     }
     
-    multi_thread_sum(array,p);
+    /* First run to warm things up */
+    //multi_thread_sum(array,p);
+
 
     auto start = system_clock::now();
 
-    int64_t i;
-    volatile float tot = 0;
-    if(p>1) {
-        for(i = 0; i < t; i++) {
-            tot += multi_thread_sum(array, p);
-        }
-    } else {
-        for(i = 0; i < t; i++) {
-            tot += single_thread_sum(array);
-        }
+    float tot = 0;
+    for(int64_t i = 0; i < t; i++) {
+        tot = multi_thread_sum(array, p);
     }
-
     auto stop = system_clock::now();
+    
     auto duration = duration_cast<microseconds>(stop-start);
     printf("%ld, %d, %lE\n", n, p, duration.count()/1000000.0 / t);
     
-
-    free(ptr);
+    //printf("%f\n", tot - single_thread_sum(array));
+    free(buf);
     return 0;
 }
 
 float multi_thread_sum(span<float> array, int p) {
     size_t arrsize = array.size();
-    if(p>1 && array.size() > MULTITHREADING_THRESHOLD) {
+    if(p>1){// && array.size() > MULTITHREADING_THRESHOLD) {
+        /* Skip this part if single-threaded */
         size_t floats_per_thread = arrsize / p;
         size_t remainder = arrsize - p * floats_per_thread;
 
@@ -103,17 +97,18 @@ float multi_thread_sum(span<float> array, int p) {
         for(auto& f : VF) {
             total += f.get();
         }
-        return total;
+        return total + remainder_sum;
     } else {
         return single_thread_sum(array);
     }
 }
 
-
+/* Very simple, but harder to optimize better than the compiler */
 float single_thread_sum(span<float> array) {
     float sum = 0;
     for(float x : array) {
         sum += x;
     }
+    printf("%f\n", sum);
     return sum;
 }
