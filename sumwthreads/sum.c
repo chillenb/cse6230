@@ -157,7 +157,7 @@ float multi_thread_sum(float* array, int64_t n, int p) {
             total += *(returnvector+i);
         }
 
-        free(paramvector); free(returnvector);
+        free(paramvector); free(returnvector); free(threadvector);
         return total;
     } else {
         return simple_sum(array, n);
