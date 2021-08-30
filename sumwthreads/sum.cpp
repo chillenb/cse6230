@@ -15,7 +15,7 @@ using std::chrono::microseconds;
 #define THREAD_LIMIT 100
 #define ARRAY_SIZE_LIMIT 1 << 30
 #define MAX_ITERS 1 << 31 
-#define MULTITHREADING_THRESHOLD 1000000
+#define MULTITHREADING_THRESHOLD 400000
 
 void usage() {
     fprintf(stderr, "usage: sum <N> <P> <T>\n");
@@ -24,7 +24,7 @@ void usage() {
 }
 
 float single_thread_sum(span<float> array);
-float multi_thread_sum(span<float> array, int p);
+float sum_with_threads(span<float> array, int p);
 
 int main(int argc, char** argv) {
     /* Allow very large array sizes */
@@ -65,34 +65,33 @@ int main(int argc, char** argv) {
 
     float tot = 0;
     for(int64_t i = 0; i < 10; i++) {
-        tot = multi_thread_sum(array, p);
+        tot = sum_with_threads(array, p);
     }
 
     auto start = system_clock::now();
 
     for(int64_t i = 0; i < t; i++) {
-        tot = multi_thread_sum(array, p);
+        tot = sum_with_threads(array, p);
     }
     auto stop = system_clock::now();
     
     auto duration = duration_cast<microseconds>(stop-start);
     printf("%ld, %d, %lE\n", n, p, duration.count()/1000000.0 / t);
-    
-    //printf("%f\n", tot - single_thread_sum(array));
     free(buf);
     return 0;
 }
 
-float multi_thread_sum(span<float> array, int p) {
+float sum_with_threads(span<float> array, int p) {
     size_t arrsize = array.size();
-    if(p>1){// && array.size() > MULTITHREADING_THRESHOLD) {
+    if(p>1 && array.size() > MULTITHREADING_THRESHOLD) {
         /* Skip this part if single-threaded */
         size_t floats_per_thread = arrsize / p;
         size_t remainder = arrsize - p * floats_per_thread;
 
         std::vector<std::future<float>> VF;
         for(int i = 0; i < p - 1; i++) {
-            VF.push_back(std::async(single_thread_sum, array.subspan(i * floats_per_thread, floats_per_thread)));
+            VF.push_back(std::async(single_thread_sum,
+                array.subspan(i * floats_per_thread, floats_per_thread)));
         }
         float remainder_sum = single_thread_sum(array.last(remainder + floats_per_thread));
         float total = 0;
