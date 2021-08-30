@@ -62,12 +62,14 @@ int main(int argc, char** argv) {
     }
     
     /* First run to warm things up */
-    //multi_thread_sum(array,p);
 
+    float tot = 0;
+    for(int64_t i = 0; i < 10; i++) {
+        tot = multi_thread_sum(array, p);
+    }
 
     auto start = system_clock::now();
 
-    float tot = 0;
     for(int64_t i = 0; i < t; i++) {
         tot = multi_thread_sum(array, p);
     }
@@ -92,7 +94,7 @@ float multi_thread_sum(span<float> array, int p) {
         for(int i = 0; i < p - 1; i++) {
             VF.push_back(std::async(single_thread_sum, array.subspan(i * floats_per_thread, floats_per_thread)));
         }
-        float remainder_sum = single_thread_sum(array.last(remainder));
+        float remainder_sum = single_thread_sum(array.last(remainder + floats_per_thread));
         float total = 0;
         for(auto& f : VF) {
             total += f.get();
@@ -109,6 +111,5 @@ float single_thread_sum(span<float> array) {
     for(float x : array) {
         sum += x;
     }
-    //printf("%f\n", sum);
     return sum;
 }
